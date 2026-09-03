@@ -5,17 +5,28 @@
 
 import { type Request, type Response } from 'express'
 import { AddressModel } from '../models/address'
+import * as security from '../lib/insecurity'
 
 export function getAddress () {
   return async (req: Request, res: Response) => {
-    const addresses = await AddressModel.findAll({ where: { UserId: req.body.UserId } })
+    const loggedInUser = security.authenticatedUsers.from(req)
+    if (!loggedInUser?.data) {
+      res.status(401).json({ status: 'error', data: 'Malicious activity detected.' })
+      return
+    }
+    const addresses = await AddressModel.findAll({ where: { UserId: loggedInUser.data.id } })
     res.status(200).json({ status: 'success', data: addresses })
   }
 }
 
 export function getAddressById () {
   return async (req: Request, res: Response) => {
-    const address = await AddressModel.findOne({ where: { id: req.params.id, UserId: req.body.UserId } })
+    const loggedInUser = security.authenticatedUsers.from(req)
+    if (!loggedInUser?.data) {
+      res.status(401).json({ status: 'error', data: 'Malicious activity detected.' })
+      return
+    }
+    const address = await AddressModel.findOne({ where: { id: req.params.id, UserId: loggedInUser.data.id } })
     if (address != null) {
       res.status(200).json({ status: 'success', data: address })
     } else {
@@ -26,7 +37,12 @@ export function getAddressById () {
 
 export function delAddressById () {
   return async (req: Request, res: Response) => {
-    const address = await AddressModel.destroy({ where: { id: req.params.id, UserId: req.body.UserId } })
+    const loggedInUser = security.authenticatedUsers.from(req)
+    if (!loggedInUser?.data) {
+      res.status(401).json({ status: 'error', data: 'Malicious activity detected.' })
+      return
+    }
+    const address = await AddressModel.destroy({ where: { id: req.params.id, UserId: loggedInUser.data.id } })
     if (address) {
       res.status(200).json({ status: 'success', data: 'Address deleted successfully.' })
     } else {
